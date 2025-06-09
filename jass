@@ -1,0 +1,125 @@
+$(document).ready(function () {
+    console.log("🚀 Consular Form Autofill Script — Full 9 Page Auto-Advance");
+
+    const data = {
+        passport: "M8234749",
+        firstName: "HARPREET KAUR",
+        lastName: "GILL",
+        phone: "920382880",
+        service: "Attestation",
+        date: "10-JUL-2025"
+    };
+
+    const DEBUG = false;
+    const log = (msg) => { if (DEBUG) console.log(msg); };
+
+    function solveMath() {
+        const question = $("label:contains('How much is')").text();
+        const match = question.match(/How much is (.+)/i);
+        if (match) {
+            try {
+                return eval(match[1].replace(/[^\d+\-*/().]/g, ''));
+            } catch {
+                return '';
+            }
+        }
+        return '';
+    }
+
+    function selectPayment() {
+        const $btn = $('a.payTypeDiv[href="javascript:;"]:visible').first();
+        if ($btn.length && !$btn.hasClass('selected')) {
+            $btn[0].click();
+            log("💳 Payment method selected");
+        }
+    }
+
+    function fillPageFields() {
+        $('input[name="SingleLine"]').val(data.passport).trigger('input change blur');
+        $('input[complink="Name_First"]').val(data.firstName).trigger('input change blur');
+        $('input[complink="Name_Last"]').val(data.lastName).trigger('input change blur');
+        $('input[name="PhoneNumber"]').val(data.phone).trigger('input change blur');
+
+        const dropdown = document.querySelector('select[name="Dropdown"]');
+        if (dropdown) {
+            const match = Array.from(dropdown.options).find(opt =>
+                opt.text.trim().toLowerCase() === data.service.toLowerCase()
+            );
+            if (match) {
+                dropdown.value = match.value;
+                dropdown.dispatchEvent(new Event('change', { bubbles: true }));
+                console.log("✅ Service selected:", match.text);
+            } else {
+                console.warn("❌ Service not found in dropdown:", data.service);
+            }
+        }
+
+        $('input[name="Date"]').val(data.date).trigger('input change blur');
+
+        const math = solveMath();
+        if (math !== '') {
+            $('input[name="SingleLine2"]').val(math).trigger('input change blur');
+            log(`🧠 Math solved: ${math}`);
+        }
+    }
+
+    function allMandatoryFieldsFilled() {
+        let allFilled = true;
+        $('input:visible[mandatory="true"], select:visible[mandatory="true"]').each(function () {
+            if (!$(this).val() || $(this).val() === '-Select-') {
+                allFilled = false;
+                return false;
+            }
+        });
+        return allFilled;
+    }
+
+    const $fileInput = $('input[type="file"]:visible').first();
+    if ($fileInput.length) {
+        console.log("📂 File upload required — waiting for manual input...");
+        $fileInput.trigger('click');
+        $fileInput.on('change', function () {
+            const file = this.files[0];
+            if (file) {
+                console.log(`✅ File selected: ${file.name}`);
+                $(this).trigger('input change blur');
+            }
+        });
+    }
+
+    let nextClickCount = 0;
+    const MAX_PAGES = 9;
+
+    function autoAdvanceForm() {
+        const swiper = document.querySelector('.swiper')?.swiper;
+
+        fillPageFields();
+        selectPayment();
+
+        if (swiper?.isEnd) {
+            console.log("🎯 Reached Page 9 (final page). Done.");
+            return;
+        }
+
+        const $nextBtn = $('.zf-next:visible');
+        if (
+            allMandatoryFieldsFilled() &&
+            $nextBtn.length &&
+            !$nextBtn.prop('disabled') &&
+            !$nextBtn.hasClass('disabled') &&
+            $nextBtn.closest('.swiper-slide-active').length
+        ) {
+            $nextBtn.click();
+            nextClickCount++;
+            log(`⚡ NEXT clicked (${nextClickCount}/${MAX_PAGES})`);
+
+            if (swiper && swiper.allowSlideNext && !swiper.isEnd) {
+                swiper.slideNext(0); // Force fast slide
+            }
+        }
+
+        requestAnimationFrame(autoAdvanceForm);
+    }
+
+    autoAdvanceForm();
+});
